@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fafbfd;
+  --foreground: #1c1c1e;
+  --accent: #0284c7; /* Sky blue */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: #f4f4f5;
+  --color-muted-foreground: #71717a;
+  --color-border: #e4e4e7;
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-serif: var(--font-serif);
+}
+
+body {
+  background: #6495ED;
+  color: var(--foreground);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  letter-spacing: -0.011em;
+}
+
+/* Premium Apple Design System style cards */
+.apple-card {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(226, 232, 240, 0.65);
+  box-shadow: 0 8px 32px 0 rgba(0, 125, 250, 0.02);
+  border-radius: 18px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.apple-card:hover {
+  border-color: rgba(14, 165, 233, 0.3);
+  box-shadow: 0 12px 40px 0 rgba(14, 165, 233, 0.04);
+  transform: translateY(-1px);
+}
+
+.apple-btn-primary {
+  background: linear-gradient(135deg, #0ea5e9, #0284c7);
+  color: #ffffff;
+  border-radius: 12px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  transition: all 0.2s ease;
+}
+
+.apple-btn-primary:hover {
+  opacity: 0.95;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.2);
+}
+
+.apple-btn-secondary {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  color: #1e293b;
+  border-radius: 12px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.apple-btn-secondary:hover {
+  background: #f8fafc;
+  border-color: rgba(14, 165, 233, 0.2);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(14, 165, 233, 0.15);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(14, 165, 233, 0.3);
+}
+
+/* Typographic Accents */
+.apple-header {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.022em;
+}
+
+.apple-subheader {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  letter-spacing: -0.011em;
+}
+
+.apple-tag-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Background Gradients */
+.apple-gradient-bg {
+  background: #6495ED;
+}
+
+.apple-glow-circle {
+  background: radial-gradient(circle, rgba(14, 165, 233, 0.08) 0%, rgba(255, 255, 255, 0) 70%);
+}
