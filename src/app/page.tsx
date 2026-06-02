@@ -9,7 +9,7 @@ import { Twitter, Linkedin, Github, Mail, Menu, X } from "lucide-react";
 // Wrap export so ReactLenis is the outermost wrapper
 export default function Home() {
   return (
-    <ReactLenis root options={{ lerp: 0.08, duration: 1.2, smoothWheel: true }}>
+    <ReactLenis root options={{ lerp: 0.1, smoothWheel: true, syncTouch: true }}>
       <LandingPage />
     </ReactLenis>
   );
@@ -58,6 +58,8 @@ function LandingPage() {
   const lenis = useLenis();
   const [activeSection, setActiveSection] = useState<string>('home');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // useRef to track current section without causing extra re-renders
+  const activeSectionRef = React.useRef<string>('home');
 
   // Sections are stacked: each is 100vh, so section index * innerHeight = target scroll position
   const sectionOrder = ['home', 'features', 'about', 'contact'];
@@ -68,7 +70,7 @@ function LandingPage() {
     if (idx === -1) return;
     const targetY = idx * window.innerHeight;
     if (lenis) {
-      lenis.scrollTo(targetY, { duration: 1.4, easing: (t: number) => 1 - Math.pow(1 - t, 4) });
+      lenis.scrollTo(targetY, { duration: 1.2, easing: (t: number) => 1 - Math.pow(1 - t, 4) });
     } else {
       window.scrollTo({ top: targetY, behavior: 'smooth' });
     }
@@ -77,20 +79,25 @@ function LandingPage() {
   const scrollToTop = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     if (lenis) {
-      lenis.scrollTo(0, { duration: 1.4, easing: (t: number) => 1 - Math.pow(1 - t, 4) });
+      lenis.scrollTo(0, { duration: 1.2, easing: (t: number) => 1 - Math.pow(1 - t, 4) });
     } else {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [lenis]);
 
-  // Track which section is currently in view based on scroll position
+  // Track active section — only call setState when section actually changes
+  // to avoid re-rendering the nav on every scroll frame
   useEffect(() => {
     const handleScrollEvent = () => {
       const scrollY = window.scrollY;
       const vh = window.innerHeight;
       const idx = Math.round(scrollY / vh);
       const clamped = Math.max(0, Math.min(idx, sectionOrder.length - 1));
-      setActiveSection(sectionOrder[clamped]);
+      const next = sectionOrder[clamped];
+      if (next !== activeSectionRef.current) {
+        activeSectionRef.current = next;
+        setActiveSection(next);
+      }
     };
     window.addEventListener('scroll', handleScrollEvent, { passive: true });
     return () => window.removeEventListener('scroll', handleScrollEvent);
@@ -229,9 +236,9 @@ function LandingPage() {
 
           {/* 1. Home Section */}
           <section id="home" className="lg:h-screen min-h-screen h-auto w-full bg-[#6495ED] flex items-center justify-center lg:sticky lg:top-0 relative overflow-hidden z-10 pt-28 pb-12 lg:py-0">
-            {/* Background Decorative Glow Circles */}
-            <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-white/10 blur-[120px] pointer-events-none z-0" />
-            <div className="absolute top-[40%] right-[-15%] w-[50%] h-[50%] rounded-full bg-white/10 blur-[100px] pointer-events-none" />
+            {/* Background Decorative Glow Circles — will-change:transform promotes to GPU layer */}
+            <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-white/10 blur-[120px] pointer-events-none z-0" style={{ willChange: 'transform' }} />
+            <div className="absolute top-[40%] right-[-15%] w-[50%] h-[50%] rounded-full bg-white/10 blur-[100px] pointer-events-none" style={{ willChange: 'transform' }} />
 
             <div className="w-full px-8 md:px-16 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
 
@@ -309,7 +316,7 @@ function LandingPage() {
 
               {/* Right Column Mascot Graphic */}
               <div className="lg:col-span-6 flex justify-center items-center relative lg:pt-0 pt-6 z-10 order-first lg:order-none">
-                <div className="absolute w-[100%] h-[100%] rounded-full bg-white/10 blur-[100px] pointer-events-none" />
+                <div className="absolute w-[100%] h-[100%] rounded-full bg-white/10 blur-[100px] pointer-events-none" style={{ willChange: 'transform' }} />
                 <div className="relative max-w-xl sm:max-w-2xl lg:max-w-3xl xl:max-w-4xl w-full animate-float select-none lg:-translate-x-28 xl:-translate-x-48">
                   <img
                     src="/studentflow_mascot.png"
@@ -337,7 +344,7 @@ function LandingPage() {
                 {landingFeatures.map((feat, idx) => (
                   <div
                     key={idx}
-                    className="bg-white/10 border border-white/20 p-8 rounded-3xl space-y-4 hover:shadow-2xl hover:bg-white/15 hover:border-white/30 transition-all duration-500 group text-white backdrop-blur-sm relative overflow-hidden"
+                    className="bg-white/[0.12] border border-white/20 p-8 rounded-3xl space-y-4 hover:shadow-2xl hover:bg-white/[0.18] hover:border-white/30 transition-all duration-300 group text-white relative overflow-hidden"
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-[9px] font-mono tracking-[0.2em] text-sky-100 font-bold uppercase">
