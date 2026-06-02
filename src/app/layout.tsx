@@ -21,7 +21,7 @@ const displayFont = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "StudentFlow | Smart College Study Dashboard & Planner",
+  title: "StudentFlow",
   description: "Manage subjects, assignments, exams, grades, attendance, study sessions, and access AI study support. The ultimate academic planner for college life.",
   keywords: ["college study planner", "gpa calculator", "attendance tracker", "pomodoro timer", "ai study assistant", "student flow", "assignment tracker"],
 };
