@@ -66,9 +66,22 @@ function LandingPage() {
 
   const scrollToSection = useCallback((e: React.MouseEvent<HTMLAnchorElement | HTMLButtonElement>, sectionId: string) => {
     e.preventDefault();
-    const idx = sectionOrder.indexOf(sectionId);
-    if (idx === -1) return;
-    const targetY = idx * window.innerHeight;
+    const element = document.getElementById(sectionId);
+    if (!element) return;
+
+    const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 1024;
+    let targetY = 0;
+
+    if (isDesktop) {
+      const idx = sectionOrder.indexOf(sectionId);
+      if (idx === -1) return;
+      targetY = idx * window.innerHeight;
+    } else {
+      const rect = element.getBoundingClientRect();
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      targetY = rect.top + scrollTop - 70; // 70px header offset
+    }
+
     if (lenis) {
       lenis.scrollTo(targetY, { duration: 1.2, easing: (t: number) => 1 - Math.pow(1 - t, 4) });
     } else {
@@ -91,9 +104,29 @@ function LandingPage() {
     const handleScrollEvent = () => {
       const scrollY = window.scrollY;
       const vh = window.innerHeight;
-      const idx = Math.round(scrollY / vh);
-      const clamped = Math.max(0, Math.min(idx, sectionOrder.length - 1));
-      const next = sectionOrder[clamped];
+      const isDesktop = window.innerWidth >= 1024;
+      
+      let next = 'home';
+      if (isDesktop) {
+        const idx = Math.round(scrollY / vh);
+        const clamped = Math.max(0, Math.min(idx, sectionOrder.length - 1));
+        next = sectionOrder[clamped];
+      } else {
+        // On mobile, check which section covers the middle of the viewport
+        const viewportMiddle = scrollY + vh / 2;
+        for (const id of sectionOrder) {
+          const element = document.getElementById(id);
+          if (element) {
+            const top = element.offsetTop;
+            const height = element.offsetHeight;
+            if (viewportMiddle >= top && viewportMiddle < top + height) {
+              next = id;
+              break;
+            }
+          }
+        }
+      }
+
       if (next !== activeSectionRef.current) {
         activeSectionRef.current = next;
         setActiveSection(next);
@@ -316,12 +349,12 @@ function LandingPage() {
 
               {/* Right Column Mascot Graphic */}
               <div className="lg:col-span-6 flex justify-center items-center relative lg:pt-0 pt-6 z-10 order-first lg:order-none">
-                <div className="absolute w-[100%] h-[100%] rounded-full bg-white/10 blur-[100px] pointer-events-none" style={{ willChange: 'transform' }} />
+                <div className="absolute w-[100%] h-[100%] rounded-full bg-white/10 blur-[100px] pointer-events-none" style={{ willChange: 'transform', transform: 'translate3d(0,0,0)' }} />
                 <div className="relative max-w-xl sm:max-w-2xl lg:max-w-3xl xl:max-w-4xl w-full animate-float select-none lg:-translate-x-28 xl:-translate-x-48">
                   <img
                     src="/studentflow_mascot.png"
                     alt="StudentFlow Mascot Character"
-                    className="w-full h-auto drop-shadow-[0_20px_50px_rgba(255,255,255,0.08)]"
+                    className="w-full h-auto"
                   />
                 </div>
               </div>
@@ -331,8 +364,8 @@ function LandingPage() {
 
           {/* 2. Features Section */}
           <section id="features" className="lg:h-screen min-h-screen h-auto w-full bg-[#6495ED] flex items-center justify-center lg:sticky lg:top-0 relative rounded-tr-[32px] rounded-tl-[32px] overflow-hidden shadow-[0_-20px_50px_rgba(0,0,0,0.15)] border-t border-white/20 z-20 pt-28 pb-12 lg:py-0">
-            {/* Background grid overlay */}
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
+            {/* Background grid overlay — hardware accelerated */}
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" style={{ willChange: 'transform', transform: 'translate3d(0,0,0)' }} />
 
             <div className="w-full px-8 md:px-16 space-y-10 z-10 lg:max-h-[85vh] lg:overflow-y-auto py-4">
               <div className="text-center max-w-xl mx-auto space-y-3">
@@ -370,8 +403,8 @@ function LandingPage() {
 
           {/* 3. About Section */}
           <section id="about" className="lg:h-screen min-h-screen h-auto w-full bg-[#6495ED] flex items-center justify-center lg:sticky lg:top-0 relative rounded-tr-[32px] rounded-tl-[32px] overflow-hidden shadow-[0_-20px_50px_rgba(0,0,0,0.2)] border-t border-white/20 z-30 pt-28 pb-12 lg:py-0">
-            {/* Background grid overlay */}
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:54px_54px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
+            {/* Background grid overlay — hardware accelerated */}
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:54px_54px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" style={{ willChange: 'transform', transform: 'translate3d(0,0,0)' }} />
 
             <div className="w-full px-8 md:px-16 max-w-4xl mx-auto text-center z-10 lg:max-h-[85vh] lg:overflow-y-auto py-4 space-y-8">
               <div className="space-y-6">
@@ -403,7 +436,8 @@ function LandingPage() {
 
           {/* 4. Contact Section */}
           <section id="contact" className="lg:h-screen min-h-screen h-auto w-full bg-[#6495ED] flex flex-col justify-between lg:sticky lg:top-0 relative rounded-tr-[32px] rounded-tl-[32px] overflow-hidden shadow-[0_-20px_50px_rgba(0,0,0,0.2)] border-t border-white/10 z-40 pt-28 pb-8 lg:py-0">
-            <div className="absolute top-0 left-0 right-0 bottom-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
+            {/* Background grid overlay — hardware accelerated */}
+            <div className="absolute top-0 left-0 right-0 bottom-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" style={{ willChange: 'transform', transform: 'translate3d(0,0,0)' }} />
             {/* Contact Body */}
             <div className="w-full px-8 md:px-16 flex-1 flex items-center justify-center z-10 lg:max-h-[80vh] lg:overflow-y-auto py-6">
               <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-12 items-start text-left text-white">

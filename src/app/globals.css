@@ -24,6 +24,23 @@ body {
   letter-spacing: -0.011em;
 }
 
+@keyframes float {
+  0% {
+    transform: translate3d(0, 0px, 0);
+  }
+  50% {
+    transform: translate3d(0, -15px, 0);
+  }
+  100% {
+    transform: translate3d(0, 0px, 0);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+  will-change: transform;
+}
+
 /* Premium Apple Design System style cards */
 .apple-card {
   background: rgba(255, 255, 255, 0.75);
