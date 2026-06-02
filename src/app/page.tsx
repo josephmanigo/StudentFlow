@@ -6,6 +6,15 @@ import { ReactLenis, useLenis } from 'lenis/react';
 import { Footer } from "@/components/ui/modem-animated-footer";
 import { Twitter, Linkedin, Github, Mail, Menu, X } from "lucide-react";
 
+// Wrap export so ReactLenis is the outermost wrapper
+export default function Home() {
+  return (
+    <ReactLenis root options={{ lerp: 0.08, duration: 1.2, smoothWheel: true }}>
+      <LandingPage />
+    </ReactLenis>
+  );
+}
+
 const landingFeatures = [
   {
     title: 'Smart Class Scheduling',
@@ -45,7 +54,7 @@ const landingFeatures = [
   },
 ];
 
-export default function Home() {
+function LandingPage() {
   const lenis = useLenis();
   const [activeSection, setActiveSection] = useState<string>('home');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -118,7 +127,6 @@ export default function Home() {
   ];
 
   return (
-    <ReactLenis root>
       <div className="min-h-screen bg-[#6495ED] text-white flex flex-col relative font-sans">
 
         {/* Navigation Header - Fixed at top for all stacking sections */}
@@ -216,11 +224,11 @@ export default function Home() {
           )}
         </header>
 
-        {/* Stacking Sections Article Container */}
-        <article className="relative w-full">
+        {/* Stacking Sections Article Container — needs 4×100vh height for 4 sticky sections */}
+        <article className="relative w-full lg:h-[400vh]">
 
           {/* 1. Home Section */}
-          <section id="home" className="lg:h-screen min-h-screen h-auto w-full bg-[#6495ED] flex items-center justify-center lg:sticky relative overflow-hidden z-10 pt-28 pb-12 lg:py-0">
+          <section id="home" className="lg:h-screen min-h-screen h-auto w-full bg-[#6495ED] flex items-center justify-center lg:sticky lg:top-0 relative overflow-hidden z-10 pt-28 pb-12 lg:py-0">
             {/* Background Decorative Glow Circles */}
             <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-white/10 blur-[120px] pointer-events-none z-0" />
             <div className="absolute top-[40%] right-[-15%] w-[50%] h-[50%] rounded-full bg-white/10 blur-[100px] pointer-events-none" />
@@ -315,7 +323,7 @@ export default function Home() {
           </section>
 
           {/* 2. Features Section */}
-          <section id="features" className="lg:h-screen min-h-screen h-auto w-full bg-[#6495ED] flex items-center justify-center lg:sticky relative rounded-tr-[32px] rounded-tl-[32px] overflow-hidden shadow-[0_-20px_50px_rgba(0,0,0,0.15)] border-t border-white/20 z-20 pt-28 pb-12 lg:py-0">
+          <section id="features" className="lg:h-screen min-h-screen h-auto w-full bg-[#6495ED] flex items-center justify-center lg:sticky lg:top-0 relative rounded-tr-[32px] rounded-tl-[32px] overflow-hidden shadow-[0_-20px_50px_rgba(0,0,0,0.15)] border-t border-white/20 z-20 pt-28 pb-12 lg:py-0">
             {/* Background grid overlay */}
             <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
 
@@ -354,7 +362,7 @@ export default function Home() {
           </section>
 
           {/* 3. About Section */}
-          <section id="about" className="lg:h-screen min-h-screen h-auto w-full bg-[#6495ED] flex items-center justify-center lg:sticky relative rounded-tr-[32px] rounded-tl-[32px] overflow-hidden shadow-[0_-20px_50px_rgba(0,0,0,0.2)] border-t border-white/20 z-30 pt-28 pb-12 lg:py-0">
+          <section id="about" className="lg:h-screen min-h-screen h-auto w-full bg-[#6495ED] flex items-center justify-center lg:sticky lg:top-0 relative rounded-tr-[32px] rounded-tl-[32px] overflow-hidden shadow-[0_-20px_50px_rgba(0,0,0,0.2)] border-t border-white/20 z-30 pt-28 pb-12 lg:py-0">
             {/* Background grid overlay */}
             <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:54px_54px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
 
@@ -387,7 +395,7 @@ export default function Home() {
           </section>
 
           {/* 4. Contact Section */}
-          <section id="contact" className="lg:h-screen min-h-screen h-auto w-full bg-[#6495ED] flex flex-col justify-between lg:sticky relative rounded-tr-[32px] rounded-tl-[32px] overflow-hidden shadow-[0_-20px_50px_rgba(0,0,0,0.2)] border-t border-white/10 z-40 pt-28 pb-8 lg:py-0">
+          <section id="contact" className="lg:h-screen min-h-screen h-auto w-full bg-[#6495ED] flex flex-col justify-between lg:sticky lg:top-0 relative rounded-tr-[32px] rounded-tl-[32px] overflow-hidden shadow-[0_-20px_50px_rgba(0,0,0,0.2)] border-t border-white/10 z-40 pt-28 pb-8 lg:py-0">
             <div className="absolute top-0 left-0 right-0 bottom-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
             {/* Contact Body */}
             <div className="w-full px-8 md:px-16 flex-1 flex items-center justify-center z-10 lg:max-h-[80vh] lg:overflow-y-auto py-6">
@@ -549,6 +557,5 @@ export default function Home() {
 
         </article>
       </div>
-    </ReactLenis>
   );
 }
