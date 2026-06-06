@@ -108,73 +108,64 @@ export async function POST(request: Request) {
         }
       }
 
-      // 3. Fetch existing assignments and exams to prevent duplicates
-      const [
-        { data: existingAssignments, error: assignmentsErr },
-        { data: existingExams, error: examsErr },
-      ] = await Promise.all([
-        supabaseAdmin.from('assignments').select('id, title, google_classroom_id, subject_id').eq('user_id', userId),
-        supabaseAdmin.from('exams').select('id, title, google_classroom_id, subject_id').eq('user_id', userId),
-      ]);
+      // 3. Fetch existing assignments to prevent duplicates
+      const { data: existingAssignments, error: assignmentsErr } = await supabaseAdmin
+        .from('assignments')
+        .select('id, title, google_classroom_id, subject_id, status')
+        .eq('user_id', userId);
 
-      if (assignmentsErr || examsErr) {
-        throw new Error(`Failed to fetch coursework items: ${assignmentsErr?.message || examsErr?.message}`);
+      if (assignmentsErr) {
+        throw new Error(`Failed to fetch coursework items: ${assignmentsErr.message}`);
       }
 
-      // 4. Insert coursework
+      // 4. Insert or update coursework as assignments
       const assignmentsToInsert: any[] = [];
-      const examsToInsert: any[] = [];
 
       for (const item of coursework) {
         const subjectId = courseIdToSubjectIdMap[item.courseId];
         if (!subjectId) continue;
 
-        const isExam = /quiz|test|exam|midterm|final/i.test(item.title) || item.workType === 'MULTIPLE_CHOICE_QUESTION';
         const deadlineVal = parseGoogleDueDate(item.dueDate, item.dueTime) || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+        const isDone = item.submissionState === 'TURNED_IN' || item.submissionState === 'RETURNED';
+        const itemStatus = isDone ? 'submitted' : 'not started';
 
-        if (isExam) {
-          const exists = existingExams?.some(
-            (e: any) => e.google_classroom_id === item.id || (e.subject_id === subjectId && e.title.toLowerCase() === item.title.toLowerCase())
-          );
-          if (!exists) {
-            examsToInsert.push({
-              subject_id: subjectId,
-              user_id: userId,
-              title: item.title,
-              exam_date: deadlineVal,
-              topics: item.description || '',
-              google_classroom_id: item.id,
-            });
-            importedExams++;
+        const existing = existingAssignments?.find(
+          (a: any) => a.google_classroom_id === item.id || (a.subject_id === subjectId && a.title.toLowerCase() === item.title.toLowerCase())
+        );
+
+        if (existing) {
+          // Sync submission status: if done in Classroom, update in Supabase
+          if (isDone && existing.status !== 'submitted') {
+            await supabaseAdmin
+              .from('assignments')
+              .update({ status: 'submitted' })
+              .eq('id', existing.id);
+          }
+          // Link Google Classroom ID if missing
+          if (!existing.google_classroom_id) {
+            await supabaseAdmin
+              .from('assignments')
+              .update({ google_classroom_id: item.id })
+              .eq('id', existing.id);
           }
         } else {
-          const exists = existingAssignments?.some(
-            (a: any) => a.google_classroom_id === item.id || (a.subject_id === subjectId && a.title.toLowerCase() === item.title.toLowerCase())
-          );
-          if (!exists) {
-            assignmentsToInsert.push({
-              subject_id: subjectId,
-              user_id: userId,
-              title: item.title,
-              description: item.description || '',
-              deadline: deadlineVal,
-              priority: 'medium',
-              status: 'not started',
-              google_classroom_id: item.id,
-            });
-            importedAssignments++;
-          }
+          assignmentsToInsert.push({
+            subject_id: subjectId,
+            user_id: userId,
+            title: item.title,
+            description: item.description || '',
+            deadline: deadlineVal,
+            priority: 'medium',
+            status: itemStatus,
+            google_classroom_id: item.id,
+          });
+          importedAssignments++;
         }
       }
 
       if (assignmentsToInsert.length > 0) {
         const { error: batchAssignErr } = await supabaseAdmin.from('assignments').insert(assignmentsToInsert);
         if (batchAssignErr) throw new Error(`Batch assignment insert failed: ${batchAssignErr.message}`);
-      }
-
-      if (examsToInsert.length > 0) {
-        const { error: batchExamsErr } = await supabaseAdmin.from('exams').insert(examsToInsert);
-        if (batchExamsErr) throw new Error(`Batch exams insert failed: ${batchExamsErr.message}`);
       }
     }
 

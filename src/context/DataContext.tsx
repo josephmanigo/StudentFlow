@@ -1085,8 +1085,6 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         const subjectId = classIdToSubjectIdMap[item.courseId];
         if (!subjectId) return;
 
-        const isExam = /quiz|test|exam|midterm|final/i.test(item.title) || item.workType === 'MULTIPLE_CHOICE_QUESTION';
-
         const parseGoogleDueDate = (dueDate?: { year?: number; month?: number; day?: number }, dueTime?: { hours?: number; minutes?: number }) => {
           if (!dueDate || !dueDate.year || !dueDate.month || !dueDate.day) return null;
           const y = dueDate.year;
@@ -1098,45 +1096,40 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         };
 
         const deadlineVal = parseGoogleDueDate(item.dueDate, item.dueTime) || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+        const isDone = item.submissionState === 'TURNED_IN' || item.submissionState === 'RETURNED';
+        const itemStatus = isDone ? 'submitted' : 'not started';
 
-        if (isExam) {
-          const exists = updatedExams.some(e => e.google_classroom_id === item.id || (e.subject_id === subjectId && e.title.toLowerCase() === item.title.toLowerCase()));
-          if (!exists) {
-            const newExam: Exam = {
-              id: 'exam-' + Math.random().toString(36).substr(2, 9),
-              subject_id: subjectId,
-              user_id: userId,
-              title: item.title,
-              exam_date: deadlineVal,
-              topics: item.description || '',
-              google_classroom_id: item.id,
-            };
-            updatedExams.push(newExam);
-            importedExams++;
+        const existingIndex = updatedAssignments.findIndex(a => a.google_classroom_id === item.id || (a.subject_id === subjectId && a.title.toLowerCase() === item.title.toLowerCase()));
+        
+        if (existingIndex !== -1) {
+          // If already exists, sync the submission status (mark as done if done in Classroom)
+          if (isDone && updatedAssignments[existingIndex].status !== 'submitted') {
+            updatedAssignments[existingIndex].status = 'submitted';
+          }
+          if (!updatedAssignments[existingIndex].google_classroom_id) {
+            updatedAssignments[existingIndex].google_classroom_id = item.id;
           }
         } else {
-          const exists = updatedAssignments.some(a => a.google_classroom_id === item.id || (a.subject_id === subjectId && a.title.toLowerCase() === item.title.toLowerCase()));
-          if (!exists) {
-            const newAssign: Assignment = {
-              id: 'assign-' + Math.random().toString(36).substr(2, 9),
-              subject_id: subjectId,
-              user_id: userId,
-              title: item.title,
-              description: item.description || '',
-              deadline: deadlineVal,
-              priority: 'medium',
-              status: 'not started',
-              google_classroom_id: item.id,
-            };
-            updatedAssignments.push(newAssign);
-            importedAssignments++;
-          }
+          const newAssign: Assignment = {
+            id: 'assign-' + Math.random().toString(36).substr(2, 9),
+            subject_id: subjectId,
+            user_id: userId,
+            title: item.title,
+            description: item.description || '',
+            deadline: deadlineVal,
+            priority: 'medium',
+            status: itemStatus,
+            google_classroom_id: item.id,
+          };
+          updatedAssignments.push(newAssign);
+          importedAssignments++;
         }
       });
 
       setAssignments(updatedAssignments);
       localStorage.setItem('studentflow_assignments', JSON.stringify(updatedAssignments));
 
+      // Clear exams state saving since we are not importing any exams
       setExams(updatedExams);
       localStorage.setItem('studentflow_exams', JSON.stringify(updatedExams));
 

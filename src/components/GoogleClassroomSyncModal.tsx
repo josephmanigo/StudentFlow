@@ -108,8 +108,9 @@ export default function GoogleClassroomSyncModal({ isOpen, onClose, onImportLoca
     try {
       const courseworkList: any[] = [];
       const materialsList: any[] = [];
+      const submissionsList: any[] = [];
 
-      // Fetch coursework and materials in parallel for selected courses
+      // Fetch coursework, submissions, and materials in parallel for selected courses
       await Promise.all(selectedCourseIds.map(async (courseId) => {
         // Fetch CourseWork
         try {
@@ -124,6 +125,21 @@ export default function GoogleClassroomSyncModal({ isOpen, onClose, onImportLoca
           }
         } catch (e) {
           console.error(`Error loading coursework for ${courseId}:`, e);
+        }
+
+        // Fetch Student Submissions
+        try {
+          const subRes = await fetch(`https://classroom.googleapis.com/v1/courses/${courseId}/courseWork/-/studentSubmissions?userId=me`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (subRes.ok) {
+            const subData = await subRes.json();
+            if (subData.studentSubmissions) {
+              submissionsList.push(...subData.studentSubmissions);
+            }
+          }
+        } catch (e) {
+          console.error(`Error loading submissions for ${courseId}:`, e);
         }
 
         // Fetch CourseWorkMaterials
@@ -141,6 +157,12 @@ export default function GoogleClassroomSyncModal({ isOpen, onClose, onImportLoca
           console.error(`Error loading materials for ${courseId}:`, e);
         }
       }));
+
+      // Attach submissionState to each coursework item
+      courseworkList.forEach(cw => {
+        const sub = submissionsList.find(s => s.courseWorkId === cw.id);
+        cw.submissionState = sub ? sub.state : null;
+      });
 
       const selectedCoursesData = courses.filter((c) => selectedCourseIds.includes(c.id));
 
