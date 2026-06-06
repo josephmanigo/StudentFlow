@@ -21,7 +21,7 @@ const navItems = [
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { session, semesters, activeSemester, signOut, isLocalMode } = useData();
+  const { session, semesters, activeSemester, signOut, isLocalMode, dataLoaded } = useData();
   const { showToast } = useToast();
   const router = useRouter();
   const pathname = usePathname();
@@ -33,12 +33,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if (!session.user) {
         showToast('Please sign in to access StudentFlow', 'info');
         router.push('/auth');
-      } else if (semesters.length === 0 && pathname !== '/onboarding') {
+      } else if (dataLoaded && semesters.length === 0 && pathname !== '/onboarding') {
         showToast('Set up your current semester to get started!', 'info');
         router.push('/onboarding');
       }
     }
-  }, [session.user, session.loading, semesters, router, pathname]);
+  }, [session.user, session.loading, dataLoaded, semesters, router, pathname]);
 
   const handleSignOut = async () => {
     try {
@@ -50,7 +50,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   };
 
-  if (session.loading) {
+  if (session.loading || (session.user && !dataLoaded)) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-3">

@@ -20,6 +20,7 @@ interface DataContextType {
   // Auth state & actions
   session: UserSession;
   isLocalMode: boolean;
+  dataLoaded: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
   signInWithGoogle: () => Promise<{ error: any }>;
@@ -86,6 +87,7 @@ export const useData = () => {
 export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<UserSession>({ user: null, loading: true });
   const [isLocalMode, setIsLocalMode] = useState(true);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
   // App data state
   const [semesters, setSemesters] = useState<Semester[]>([]);
@@ -166,6 +168,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     setStudyChats([]);
     setGoals([]);
     setActiveSemesterState(null);
+    setDataLoaded(false);
   };
 
   // Seed default data for local mode so app doesn't start empty
@@ -324,6 +327,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     setStudyChats(demoChats);
     setPomodoroSessions([]);
     setActiveSemesterState(demoSemester);
+    setDataLoaded(true);
   };
 
   // Load App Data when Session changes
@@ -368,6 +372,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
         const active = sems.find(s => s.is_active) || sems[0] || null;
         setActiveSemesterState(active);
+        setDataLoaded(true);
       }
     } else {
       // Supabase Mode
@@ -426,8 +431,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       const { data: glsData } = await supabase.from('goals').select('*');
       setGoals(glsData || []);
 
+      setDataLoaded(true);
     } catch (err) {
       console.error('Error fetching data from Supabase:', err);
+      setDataLoaded(true); // Resolve loading even on error to unblock UI
     }
   };
 
@@ -1014,6 +1021,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       value={{
         session,
         isLocalMode,
+        dataLoaded,
         signIn,
         signUp,
         signInWithGoogle,
