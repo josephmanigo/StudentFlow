@@ -236,15 +236,30 @@ export default function PlannerPage() {
             </div>
           </div>
 
-          <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-start gap-4 text-xs font-mono font-bold tracking-widest text-sky-200/50 uppercase">
-            <span className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-white" />
-              <span>Assignment</span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 bg-white" />
-              <span>Exam</span>
-            </span>
+          <div className="mt-4 pt-3 border-t border-white/10 flex flex-col gap-3">
+            {/* Event Shapes Legend */}
+            <div className="flex flex-wrap items-center justify-start gap-4 text-xs font-mono font-bold tracking-widest text-sky-200/50 uppercase">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-white" />
+                <span>Assignment (Circle)</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 bg-white" />
+                <span>Exam (Square)</span>
+              </span>
+            </div>
+
+            {/* Subject Color Labels */}
+            {subjects.length > 0 && (
+              <div className="flex flex-wrap gap-x-4 gap-y-2 pt-2.5 border-t border-white/5 w-full">
+                {subjects.map((subj) => (
+                  <span key={subj.id} className="flex items-center gap-1.5 text-[10px] font-mono font-bold tracking-wider text-sky-100/70">
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0 border border-white/10" style={{ backgroundColor: subj.color }} />
+                    <span>{subj.code ? `[${subj.code}] ` : ''}{subj.name}</span>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
