@@ -12,7 +12,7 @@ async function generateLocalDatabaseResponse(userId: string | null, prompt: stri
       text: `### StudentFlow AI (Local Demo Mode)
 
 **System Status: Local Database Mode**
-Your OpenAI API Key is currently unavailable or has exceeded its quota (429 Quota Exceeded). Since you are not logged in, I am showing a generic overview.
+Your Gemini API Key is currently unavailable or has exceeded its quota (429 Quota Exceeded). Since you are not logged in, I am showing a generic overview.
 
 **Study Tip:** Try logging in and adding your subjects to get a personalized database-backed answer!`,
       sources: []
@@ -37,7 +37,7 @@ Your OpenAI API Key is currently unavailable or has exceeded its quota (429 Quot
     ]);
 
     let text = `**System Status: Local Database Mode**
-Your OpenAI API Key has exceeded its quota or is invalid. I am answering using your local StudentFlow tracker data.
+Your Gemini API Key has exceeded its quota or is invalid. I am answering using your local StudentFlow tracker data.
 
 `;
 
@@ -225,7 +225,7 @@ Your OpenAI API Key has exceeded its quota or is invalid. I am answering using y
       text: `### StudentFlow AI (Fallback)
 
 **System Status: Local Database Mode**
-Your OpenAI API Key is currently unavailable or has exceeded its quota (429 Quota Exceeded). Additionally, fetching local data failed.
+Your Gemini API Key is currently unavailable or has exceeded its quota (429 Quota Exceeded). Additionally, fetching local data failed.
 
 Please check your internet connection or verify your Supabase database is online.`,
       sources: []
@@ -248,8 +248,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
     }
 
-    // Fallback when OpenAI key is not set or has placeholder value
-    if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY.startsWith('your-')) {
+    // Fallback when Gemini key is not set or has placeholder value
+    const hasGeminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+    if (!hasGeminiKey || hasGeminiKey.startsWith('your-')) {
       const fallbackResult = await generateLocalDatabaseResponse(userId, prompt);
       return NextResponse.json(fallbackResult);
     }

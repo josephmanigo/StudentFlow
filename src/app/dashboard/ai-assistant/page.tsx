@@ -288,7 +288,7 @@ export default function AiAssistantPage() {
           </div>
           <div>
             <h1 className="text-white font-extrabold text-sm leading-tight">AI Study Assistant</h1>
-            <p className="text-white/40 text-[10px] font-mono uppercase tracking-widest">Powered by OpenAI GPT-4o-mini + RAG</p>
+            <p className="text-white/40 text-[10px] font-mono uppercase tracking-widest">Powered by Gemini 2.5 Flash + RAG</p>
           </div>
         </div>
 

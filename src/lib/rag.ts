@@ -1,46 +1,98 @@
-import OpenAI from 'openai';
 import { supabaseAdmin } from './supabaseServer';
 
-// Lazy OpenAI singleton — only created on first use, not at module load
-let _openai: OpenAI | null = null;
-function getOpenAI(): OpenAI {
-  if (_openai) return _openai;
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error('Missing OPENAI_API_KEY environment variable.');
-  _openai = new OpenAI({ apiKey });
-  return _openai;
-}
-
-// OpenAI text-embedding-3-small outputs 1536-dimensional vectors
-const EMBEDDING_MODEL = 'text-embedding-3-small';
 const CHUNK_SIZE = 800;        // characters per chunk
 const CHUNK_OVERLAP = 100;     // characters of overlap between chunks
 
 // ─────────────────────────────────────────────────────────────
-// Embedding
+// Embedding (Gemini)
 // ─────────────────────────────────────────────────────────────
 
-/**
- * Embeds a single string using OpenAI text-embedding-3-small.
- */
-export async function embedText(text: string): Promise<number[]> {
-  const response = await getOpenAI().embeddings.create({
-    model: EMBEDDING_MODEL,
-    input: text.replace(/\n/g, ' ').trim(),
-  });
-  return response.data[0].embedding;
+function getGeminiApiKey(): string {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (!apiKey) {
+    throw new Error('Missing GEMINI_API_KEY or GOOGLE_API_KEY environment variable.');
+  }
+  return apiKey;
+}
+
+function padEmbedding(vector: number[], targetDim = 1536): number[] {
+  if (vector.length >= targetDim) {
+    return vector.slice(0, targetDim);
+  }
+  return [...vector, ...new Array(targetDim - vector.length).fill(0)];
 }
 
 /**
- * Embeds multiple strings in a single API call (batch).
+ * Embeds a single string using Google Gemini text-embedding-004.
+ * Padded to 1536 dimensions to match the database pgvector schema.
+ */
+export async function embedText(text: string): Promise<number[]> {
+  const apiKey = getGeminiApiKey();
+  const cleanedText = text.replace(/\n/g, ' ').trim();
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'models/text-embedding-004',
+        content: {
+          parts: [{ text: cleanedText }]
+        }
+      })
+    }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error?.message || `Gemini embedding API failed with status ${response.status}`);
+  }
+
+  const data = await response.json();
+  const vector = data.embedding?.values;
+  if (!vector || !Array.isArray(vector)) {
+    throw new Error('Invalid response structure from Gemini embedding API');
+  }
+
+  return padEmbedding(vector);
+}
+
+/**
+ * Embeds multiple strings in a single API call (batch) using Google Gemini.
+ * Padded to 1536 dimensions.
  */
 export async function embedBatch(texts: string[]): Promise<number[][]> {
-  const cleaned = texts.map((t) => t.replace(/\n/g, ' ').trim());
-  const response = await getOpenAI().embeddings.create({
-    model: EMBEDDING_MODEL,
-    input: cleaned,
-  });
-  return response.data.map((d) => d.embedding);
+  const apiKey = getGeminiApiKey();
+  
+  const requests = texts.map((text) => ({
+    model: 'models/text-embedding-004',
+    content: {
+      parts: [{ text: text.replace(/\n/g, ' ').trim() }]
+    }
+  }));
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:batchEmbedContents?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requests })
+    }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error?.message || `Gemini batch embedding API failed with status ${response.status}`);
+  }
+
+  const data = await response.json();
+  const embeddings = data.embeddings;
+  if (!embeddings || !Array.isArray(embeddings)) {
+    throw new Error('Invalid response structure from Gemini batch embedding API');
+  }
+
+  return embeddings.map((e: any) => padEmbedding(e.values));
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -296,72 +348,93 @@ export async function syncStudentDataToVectorStore(userId: string): Promise<{ ch
 }
 
 // ─────────────────────────────────────────────────────────────
-// RAG Response Generation (OpenAI)
+// RAG Response Generation (Gemini)
 // ─────────────────────────────────────────────────────────────
-
+ 
 interface GenerateOptions {
   userId: string;
   question: string;
   sourceIds?: string[];
 }
-
+ 
 interface RAGResult {
   text: string;
   sources: string[];
 }
-
+ 
 /**
  * Full RAG pipeline:
- * 1. Embed the question
+ * 1. Embed the question using Gemini
  * 2. Retrieve relevant context from pgvector
  * 3. Build an augmented prompt
- * 4. Generate a response with OpenAI GPT-4o-mini
+ * 4. Generate a response with Google Gemini gemini-2.5-flash
  */
 export async function generateRAGResponse(options: GenerateOptions): Promise<RAGResult> {
   const { userId, question, sourceIds } = options;
-
+ 
   // Step 1: Retrieve context
   const chunks = await retrieveContext(userId, question, 8, sourceIds);
-
+ 
   // Step 2: Build context block
   const uniqueSources = [...new Set(chunks.map((c) => c.source_name))];
   const contextBlock = chunks.length > 0
     ? chunks.map((c, i) => `[${i + 1}] (Source: ${c.source_name})\n${c.content}`).join('\n\n---\n\n')
     : '';
-
+ 
   // Step 3: System prompt
   const systemPrompt = `You are StudentFlow's AI Study Assistant — a smart, personalized academic helper.
-
+ 
 ${contextBlock
   ? `You have access to the following relevant context from the student's uploaded materials and academic data:
-
+ 
 <context>
 ${contextBlock}
 </context>
-
+ 
 Use this context to give accurate, specific answers. Cite which source you used when relevant (e.g., "According to your notes on [topic]..."). If the context does not contain enough information, say so and provide your best general answer.`
   : `No specific materials are uploaded yet. Give a helpful general academic answer.`
 }
-
+ 
 Format your response clearly using Markdown:
 - Use headers (##, ###) for sections
 - Use bullet points for lists
 - Use code blocks for code
 - Use bold for key terms
 - Be concise but thorough`;
-
-  // Step 4: Generate
-  const completion = await getOpenAI().chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: question },
-    ],
-    temperature: 0.7,
-    max_tokens: 1500,
-  });
-
-  const text = completion.choices[0]?.message?.content ?? 'Sorry, I could not generate a response.';
-
+ 
+  // Step 4: Generate using Gemini REST API
+  const apiKey = getGeminiApiKey();
+ 
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: question }]
+          }
+        ],
+        systemInstruction: {
+          parts: [{ text: systemPrompt }]
+        },
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 1500
+        }
+      })
+    }
+  );
+ 
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error?.message || `Gemini generation API failed with status ${response.status}`);
+  }
+ 
+  const data = await response.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? 'Sorry, I could not generate a response.';
+ 
   return { text, sources: uniqueSources };
 }

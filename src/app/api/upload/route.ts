@@ -78,10 +78,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if OpenAI is configured
-    if (!process.env.OPENAI_API_KEY) {
+    // Check if Gemini is configured
+    const hasGeminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+    if (!hasGeminiKey) {
       return NextResponse.json(
-        { error: 'OpenAI API key is not configured. Add OPENAI_API_KEY to .env.local' },
+        { error: 'Gemini API key is not configured. Add GEMINI_API_KEY to .env.local' },
         { status: 503 }
       );
     }
