@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useData } from '@/context/DataContext';
 import { useToast } from '@/context/ToastContext';
 
@@ -31,6 +31,12 @@ export default function SubjectsPage() {
   const [room, setRoom] = useState('');
   const [color, setColor] = useState('#0ea5e9');
 
+  // Schedule picker helper states
+  const [selectedDays, setSelectedDays] = useState<string[]>([]);
+  const [startTime, setStartTime] = useState('09:00');
+  const [endTime, setEndTime] = useState('10:30');
+  const [isCustomSchedule, setIsCustomSchedule] = useState(false);
+
   const colorOptions = [
     '#0ea5e9', // Sky Blue
     '#6366f1', // Indigo
@@ -42,6 +48,75 @@ export default function SubjectsPage() {
     '#ec4899', // Pink
   ];
 
+  // Helper: Format 24h string to 12h AM/PM
+  const format12Hour = (time24: string): string => {
+    if (!time24) return '';
+    const [hoursStr, minutesStr] = time24.split(':');
+    let hours = parseInt(hoursStr, 10);
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    return `${hours}:${minutesStr} ${ampm}`;
+  };
+
+  // Helper: Convert 12h AM/PM to 24h string
+  const convertTo24Hour = (timeStr: string, ampm?: string): string => {
+    let [hours, minutes] = timeStr.split(':').map(Number);
+    if (ampm) {
+      const isPM = ampm.toUpperCase() === 'PM';
+      if (isPM && hours < 12) hours += 12;
+      if (!isPM && hours === 12) hours = 0;
+    }
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+  };
+
+  // Helper: Parse schedule string back to days and times
+  const parseSchedule = (schedStr: string) => {
+    const shortDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    let days: string[] = [];
+    let start = '09:00';
+    let end = '10:30';
+    
+    if (!schedStr) return { days, start, end };
+    
+    const parts = schedStr.split(/\s+/);
+    const dayPart = parts[0] || '';
+    
+    // Split by slash first
+    const splitDays = dayPart.split('/');
+    for (const d of shortDays) {
+      if (splitDays.includes(d)) {
+        days.push(d);
+      }
+    }
+
+    const timeRegex = /(\d{1,2}:\d{2})\s*(AM|PM)?/gi;
+    const matches = [...schedStr.matchAll(timeRegex)];
+    
+    if (matches.length > 0) {
+      start = convertTo24Hour(matches[0][1], matches[0][2]);
+    }
+    if (matches.length > 1) {
+      end = convertTo24Hour(matches[1][1], matches[1][2]);
+    }
+    
+    return { days, start, end };
+  };
+
+  // Update schedule text automatically when picker states change
+  useEffect(() => {
+    if (!isCustomSchedule) {
+      if (selectedDays.length > 0) {
+        const daysStr = selectedDays.join('/');
+        const startFormatted = format12Hour(startTime);
+        const endFormatted = format12Hour(endTime);
+        setSchedule(`${daysStr} ${startFormatted} - ${endFormatted}`);
+      } else {
+        setSchedule('');
+      }
+    }
+  }, [selectedDays, startTime, endTime, isCustomSchedule]);
+
   const handleOpenAddModal = () => {
     setEditingSubjId(null);
     setName('');
@@ -50,6 +125,13 @@ export default function SubjectsPage() {
     setSchedule('');
     setRoom('');
     setColor(colorOptions[0]);
+
+    // Reset picker helper states
+    setSelectedDays([]);
+    setStartTime('09:00');
+    setEndTime('10:30');
+    setIsCustomSchedule(false);
+
     setModalOpen(true);
   };
 
@@ -61,6 +143,19 @@ export default function SubjectsPage() {
     setSchedule(subj.schedule);
     setRoom(subj.room);
     setColor(subj.color || colorOptions[0]);
+
+    // Parse schedule text to picker states
+    const parsed = parseSchedule(subj.schedule);
+    if (parsed.days.length > 0) {
+      setSelectedDays(parsed.days);
+      setStartTime(parsed.start);
+      setEndTime(parsed.end);
+      setIsCustomSchedule(false);
+    } else {
+      setSelectedDays([]);
+      setIsCustomSchedule(true);
+    }
+
     setModalOpen(true);
   };
 
@@ -402,9 +497,19 @@ export default function SubjectsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
+              <div>
+                <div className="flex justify-between items-center">
                   <label className="block text-[9px] font-mono font-bold uppercase tracking-[0.18em] text-sky-200/70">Class Schedule</label>
+                  <button
+                    type="button"
+                    onClick={() => setIsCustomSchedule(!isCustomSchedule)}
+                    className="text-[9px] font-mono font-bold uppercase tracking-wider text-sky-300 hover:text-white transition-colors cursor-pointer"
+                  >
+                    {isCustomSchedule ? 'Use Easy Picker' : 'Type Custom Text'}
+                  </button>
+                </div>
+                
+                {isCustomSchedule ? (
                   <input
                     type="text"
                     value={schedule}
@@ -412,17 +517,73 @@ export default function SubjectsPage() {
                     placeholder="e.g. Tue/Thu 11:00 AM"
                     className="mt-1.5 block w-full px-3.5 py-2.5 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-sky-200/30 focus:bg-white/10 focus:outline-none focus:ring-1 focus:ring-white/20 text-xs font-semibold"
                   />
-                </div>
-                <div>
-                  <label className="block text-[9px] font-mono font-bold uppercase tracking-[0.18em] text-sky-200/70">Room / Location</label>
-                  <input
-                    type="text"
-                    value={room}
-                    onChange={(e) => setRoom(e.target.value)}
-                    placeholder="e.g. Science Hall 104"
-                    className="mt-1.5 block w-full px-3.5 py-2.5 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-sky-200/30 focus:bg-white/10 focus:outline-none focus:ring-1 focus:ring-white/20 text-xs font-semibold"
-                  />
-                </div>
+                ) : (
+                  <div className="mt-1.5 space-y-3.5 p-3.5 bg-white/5 border border-white/10 rounded-2xl">
+                    {/* Days select */}
+                    <div>
+                      <span className="block text-[8px] font-mono font-bold uppercase tracking-wider text-sky-200/50 mb-1.5">Select Days</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => {
+                          const isSelected = selectedDays.includes(day);
+                          const displayLabels: Record<string, string> = {
+                            'Mon': 'M', 'Tue': 'T', 'Wed': 'W', 'Thu': 'Th', 'Fri': 'F', 'Sat': 'S', 'Sun': 'Su'
+                          };
+                          return (
+                            <button
+                              key={day}
+                              type="button"
+                              onClick={() => {
+                                setSelectedDays(prev => 
+                                  prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
+                                );
+                              }}
+                              className={`w-8 h-8 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
+                                isSelected 
+                                  ? 'bg-white text-slate-900 border border-white font-extrabold shadow-md' 
+                                  : 'bg-white/5 hover:bg-white/10 text-white border border-white/10'
+                              }`}
+                            >
+                              {displayLabels[day]}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    
+                    {/* Time select */}
+                    <div className="grid grid-cols-2 gap-3 pt-1 border-t border-white/5">
+                      <div>
+                        <span className="block text-[8px] font-mono font-bold uppercase tracking-wider text-sky-200/50 mb-1.5">Start Time</span>
+                        <input
+                          type="time"
+                          value={startTime}
+                          onChange={(e) => setStartTime(e.target.value)}
+                          className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-xs font-semibold focus:outline-none focus:bg-white/10 focus:ring-1 focus:ring-white/20"
+                        />
+                      </div>
+                      <div>
+                        <span className="block text-[8px] font-mono font-bold uppercase tracking-wider text-sky-200/50 mb-1.5">End Time</span>
+                        <input
+                          type="time"
+                          value={endTime}
+                          onChange={(e) => setEndTime(e.target.value)}
+                          className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-xs font-semibold focus:outline-none focus:bg-white/10 focus:ring-1 focus:ring-white/20"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-[9px] font-mono font-bold uppercase tracking-[0.18em] text-sky-200/70">Room / Location</label>
+                <input
+                  type="text"
+                  value={room}
+                  onChange={(e) => setRoom(e.target.value)}
+                  placeholder="e.g. Science Hall 104"
+                  className="mt-1.5 block w-full px-3.5 py-2.5 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-sky-200/30 focus:bg-white/10 focus:outline-none focus:ring-1 focus:ring-white/20 text-xs font-semibold"
+                />
               </div>
 
               <div>

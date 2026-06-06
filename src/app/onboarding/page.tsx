@@ -57,6 +57,37 @@ export default function OnboardingPage() {
   const [subjRoom, setSubjRoom] = useState('');
   const [selectedColor, setSelectedColor] = useState(colorPalettes[0]);
 
+  // Schedule picker helper states
+  const [selectedDays, setSelectedDays] = useState<string[]>([]);
+  const [startTime, setStartTime] = useState('09:00');
+  const [endTime, setEndTime] = useState('10:30');
+  const [isCustomSchedule, setIsCustomSchedule] = useState(false);
+
+  // Helper: Format 24h string to 12h AM/PM
+  const format12Hour = (time24: string): string => {
+    if (!time24) return '';
+    const [hoursStr, minutesStr] = time24.split(':');
+    let hours = parseInt(hoursStr, 10);
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    return `${hours}:${minutesStr} ${ampm}`;
+  };
+
+  // Update schedule text automatically when picker states change
+  useEffect(() => {
+    if (!isCustomSchedule) {
+      if (selectedDays.length > 0) {
+        const daysStr = selectedDays.join('/');
+        const startFormatted = format12Hour(startTime);
+        const endFormatted = format12Hour(endTime);
+        setSubjSchedule(`${daysStr} ${startFormatted} - ${endFormatted}`);
+      } else {
+        setSubjSchedule('');
+      }
+    }
+  }, [selectedDays, startTime, endTime, isCustomSchedule]);
+
   const currentTotal = gradeBreakdown.reduce((sum, r) => sum + r.weight, 0);
   const remainingWeight = 100 - currentTotal;
   const isTotal100 = Math.round(currentTotal) === 100;
@@ -148,6 +179,13 @@ export default function OnboardingPage() {
     setSubjInstructor('');
     setSubjSchedule('');
     setSubjRoom('');
+
+    // Reset picker helper states
+    setSelectedDays([]);
+    setStartTime('09:00');
+    setEndTime('10:30');
+    setIsCustomSchedule(false);
+
     // Select next color palette
     const nextColorIndex = (colorPalettes.indexOf(selectedColor) + 1) % colorPalettes.length;
     setSelectedColor(colorPalettes[nextColorIndex]);
@@ -417,15 +455,82 @@ export default function OnboardingPage() {
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="block text-[9px] font-mono tracking-[0.25em] uppercase text-sky-100/80 font-bold">Schedule</label>
-                  <input
-                    type="text"
-                    value={subjSchedule}
-                    onChange={(e) => setSubjSchedule(e.target.value)}
-                    placeholder="e.g. Mon/Wed 10:00 AM"
-                    className="w-full px-4 py-3 bg-white/5 border border-white/15 rounded-xl text-xs text-white placeholder-sky-200/40 focus:outline-none focus:bg-white/10 focus:border-white/30 focus:ring-1 focus:ring-white/30 transition-all font-medium"
-                  />
+                <div className="md:col-span-2 space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <label className="block text-[9px] font-mono tracking-[0.25em] uppercase text-sky-100/80 font-bold">Schedule</label>
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomSchedule(!isCustomSchedule)}
+                      className="text-[9px] font-mono font-bold uppercase tracking-wider text-sky-200 hover:text-white transition-colors cursor-pointer"
+                    >
+                      {isCustomSchedule ? 'Use Easy Picker' : 'Type Custom Text'}
+                    </button>
+                  </div>
+                  
+                  {isCustomSchedule ? (
+                    <input
+                      type="text"
+                      value={subjSchedule}
+                      onChange={(e) => setSubjSchedule(e.target.value)}
+                      placeholder="e.g. Tue/Thu 11:00 AM"
+                      className="w-full px-4 py-3 bg-white/5 border border-white/15 rounded-xl text-xs text-white placeholder-sky-200/40 focus:outline-none focus:bg-white/10 focus:border-white/30 focus:ring-1 focus:ring-white/30 transition-all font-medium"
+                    />
+                  ) : (
+                    <div className="space-y-3.5 p-3.5 bg-white/5 border border-white/10 rounded-2xl">
+                      {/* Days select */}
+                      <div>
+                        <span className="block text-[8px] font-mono font-bold uppercase tracking-wider text-sky-200/50 mb-1.5">Select Days</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => {
+                            const isSelected = selectedDays.includes(day);
+                            const displayLabels: Record<string, string> = {
+                              'Mon': 'M', 'Tue': 'T', 'Wed': 'W', 'Thu': 'Th', 'Fri': 'F', 'Sat': 'S', 'Sun': 'Su'
+                            };
+                            return (
+                              <button
+                                key={day}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedDays(prev => 
+                                    prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
+                                  );
+                                }}
+                                className={`w-8 h-8 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
+                                  isSelected 
+                                    ? 'bg-white text-[#6495ED] border border-white font-extrabold shadow-md' 
+                                    : 'bg-white/5 hover:bg-white/10 text-white border border-white/10'
+                                }`}
+                              >
+                                {displayLabels[day]}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      
+                      {/* Time select */}
+                      <div className="grid grid-cols-2 gap-3 pt-1 border-t border-white/5">
+                        <div>
+                          <span className="block text-[8px] font-mono font-bold uppercase tracking-wider text-sky-200/50 mb-1.5">Start Time</span>
+                          <input
+                            type="time"
+                            value={startTime}
+                            onChange={(e) => setStartTime(e.target.value)}
+                            className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-xs font-semibold focus:outline-none focus:bg-white/10 focus:ring-1 focus:ring-white/20"
+                          />
+                        </div>
+                        <div>
+                          <span className="block text-[8px] font-mono font-bold uppercase tracking-wider text-sky-200/50 mb-1.5">End Time</span>
+                          <input
+                            type="time"
+                            value={endTime}
+                            onChange={(e) => setEndTime(e.target.value)}
+                            className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-xs font-semibold focus:outline-none focus:bg-white/10 focus:ring-1 focus:ring-white/20"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-1.5">
