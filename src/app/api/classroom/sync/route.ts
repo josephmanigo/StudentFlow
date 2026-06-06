@@ -167,6 +167,70 @@ export async function POST(request: Request) {
         const { error: batchAssignErr } = await supabaseAdmin.from('assignments').insert(assignmentsToInsert);
         if (batchAssignErr) throw new Error(`Batch assignment insert failed: ${batchAssignErr.message}`);
       }
+
+      // 4b. Fetch existing grades to prevent duplicates
+      const { data: existingGrades, error: gradesErr } = await supabaseAdmin
+        .from('grades')
+        .select('id, name, google_classroom_id, subject_id, score')
+        .eq('user_id', userId);
+
+      if (gradesErr) {
+        throw new Error(`Failed to fetch grades: ${gradesErr.message}`);
+      }
+
+      // 4c. Insert or update coursework grades
+      const gradesToInsert: any[] = [];
+
+      for (const item of coursework) {
+        const subjectId = courseIdToSubjectIdMap[item.courseId];
+        if (!subjectId) continue;
+
+        const gradeValue = item.assignedGrade !== undefined && item.assignedGrade !== null 
+          ? item.assignedGrade 
+          : (item.draftGrade !== undefined && item.draftGrade !== null ? item.draftGrade : null);
+
+        if (gradeValue !== null) {
+          const maxPoints = item.maxPoints || 100;
+          const isQuiz = /quiz|test/i.test(item.title) || item.workType === 'MULTIPLE_CHOICE_QUESTION';
+          const gradeCategory = isQuiz ? 'quiz' : 'activity';
+
+          const existing = existingGrades?.find(
+            (g: any) => g.google_classroom_id === item.id || (g.subject_id === subjectId && g.name === `Grade for ${item.title}`)
+          );
+
+          if (existing) {
+            // Update score if it changed
+            if (Number(existing.score) !== Number(gradeValue)) {
+              await supabaseAdmin
+                .from('grades')
+                .update({ score: gradeValue, max_score: maxPoints })
+                .eq('id', existing.id);
+            }
+            if (!existing.google_classroom_id) {
+              await supabaseAdmin
+                .from('grades')
+                .update({ google_classroom_id: item.id })
+                .eq('id', existing.id);
+            }
+          } else {
+            gradesToInsert.push({
+              subject_id: subjectId,
+              user_id: userId,
+              category: gradeCategory,
+              name: `Grade for ${item.title}`,
+              score: gradeValue,
+              max_score: maxPoints,
+              weight: 0,
+              google_classroom_id: item.id,
+            });
+          }
+        }
+      }
+
+      if (gradesToInsert.length > 0) {
+        const { error: batchGradesErr } = await supabaseAdmin.from('grades').insert(gradesToInsert);
+        if (batchGradesErr) throw new Error(`Batch grades insert failed: ${batchGradesErr.message}`);
+      }
     }
 
     // 5. Index Coursework Materials / Notes (Same flow for Local and Supabase modes)

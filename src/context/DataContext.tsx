@@ -1129,7 +1129,50 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       setAssignments(updatedAssignments);
       localStorage.setItem('studentflow_assignments', JSON.stringify(updatedAssignments));
 
-      // Clear exams state saving since we are not importing any exams
+      // 3. Sync grades locally
+      const updatedGrades = [...grades];
+      
+      data.coursework.forEach(item => {
+        const subjectId = classIdToSubjectIdMap[item.courseId];
+        if (!subjectId) return;
+
+        const gradeValue = item.assignedGrade !== undefined && item.assignedGrade !== null 
+          ? item.assignedGrade 
+          : (item.draftGrade !== undefined && item.draftGrade !== null ? item.draftGrade : null);
+
+        if (gradeValue !== null) {
+          const maxPoints = item.maxPoints || 100;
+          const isQuiz = /quiz|test/i.test(item.title) || item.workType === 'MULTIPLE_CHOICE_QUESTION';
+          const gradeCategory = isQuiz ? 'quiz' : 'activity';
+
+          const existingIndex = updatedGrades.findIndex(g => g.google_classroom_id === item.id || (g.subject_id === subjectId && g.name === `Grade for ${item.title}`));
+
+          if (existingIndex !== -1) {
+            updatedGrades[existingIndex].score = gradeValue;
+            updatedGrades[existingIndex].max_score = maxPoints;
+            if (!updatedGrades[existingIndex].google_classroom_id) {
+              updatedGrades[existingIndex].google_classroom_id = item.id;
+            }
+          } else {
+            const newGrade: Grade = {
+              id: 'grade-' + Math.random().toString(36).substr(2, 9),
+              subject_id: subjectId,
+              user_id: userId,
+              category: gradeCategory,
+              name: `Grade for ${item.title}`,
+              score: gradeValue,
+              max_score: maxPoints,
+              weight: 0,
+              google_classroom_id: item.id,
+            };
+            updatedGrades.push(newGrade);
+          }
+        }
+      });
+
+      setGrades(updatedGrades);
+      localStorage.setItem('studentflow_grades', JSON.stringify(updatedGrades));
+
       setExams(updatedExams);
       localStorage.setItem('studentflow_exams', JSON.stringify(updatedExams));
 

@@ -64,6 +64,7 @@ export interface Grade {
   score: number;
   max_score: number;
   weight: number; // e.g., 0.1 for 10%
+  google_classroom_id?: string; // Links this grade to a Google Classroom Coursework item
   created_at?: string;
 }
 

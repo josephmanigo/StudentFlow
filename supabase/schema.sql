@@ -134,6 +134,7 @@ CREATE TABLE IF NOT EXISTS public.grades (
   score      NUMERIC NOT NULL,
   max_score  NUMERIC NOT NULL DEFAULT 100,
   weight     NUMERIC NOT NULL DEFAULT 0,
+  google_classroom_id TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

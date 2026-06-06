@@ -158,10 +158,12 @@ export default function GoogleClassroomSyncModal({ isOpen, onClose, onImportLoca
         }
       }));
 
-      // Attach submissionState to each coursework item
+      // Attach submissionState, assignedGrade, and draftGrade to each coursework item
       courseworkList.forEach(cw => {
         const sub = submissionsList.find(s => s.courseWorkId === cw.id);
         cw.submissionState = sub ? sub.state : null;
+        cw.assignedGrade = sub ? sub.assignedGrade : null;
+        cw.draftGrade = sub ? sub.draftGrade : null;
       });
 
       const selectedCoursesData = courses.filter((c) => selectedCourseIds.includes(c.id));
