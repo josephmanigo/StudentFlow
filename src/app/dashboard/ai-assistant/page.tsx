@@ -46,11 +46,11 @@ const CheckIcon = () => (
 
 // ─── Types ────────────────────────────────────────────────────
 const SUGGESTION_PROMPTS = [
-  { label: '📚 Summarize my notes', query: 'Summarize the key concepts from my uploaded study materials.' },
-  { label: '📝 Quiz me on this topic', query: 'Create 5 quiz questions based on my uploaded notes to test my understanding.' },
-  { label: '🗓️ What are my upcoming deadlines?', query: 'What assignments and exams do I have coming up soon?' },
-  { label: '📊 How are my grades?', query: 'Give me an overview of how I am performing academically this semester.' },
-  { label: '🧠 Explain a difficult concept', query: 'What are the hardest topics in my notes? Explain one clearly.' },
+  { label: 'Summarize my notes', query: 'Summarize the key concepts from my uploaded study materials.' },
+  { label: 'Quiz me on this topic', query: 'Create 5 quiz questions based on my uploaded notes to test my understanding.' },
+  { label: 'What are my upcoming deadlines?', query: 'What assignments and exams do I have coming up soon?' },
+  { label: 'How are my grades?', query: 'Give me an overview of how I am performing academically this semester.' },
+  { label: 'Explain a difficult concept', query: 'What are the hardest topics in my notes? Explain one clearly.' },
 ];
 
 const MAX_FILE_SIZE_MB = 20;
