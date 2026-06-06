@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS public.subjects (
   schedule        TEXT NOT NULL DEFAULT '',
   room            TEXT NOT NULL DEFAULT '',
   color           TEXT NOT NULL DEFAULT '#4F46E5',
+  google_classroom_id TEXT,
   created_at      TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -88,6 +89,7 @@ CREATE TABLE IF NOT EXISTS public.assignments (
   priority      TEXT NOT NULL DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')),
   status        TEXT NOT NULL DEFAULT 'not started' CHECK (status IN ('not started', 'in progress', 'submitted')),
   reminder_date TIMESTAMPTZ,
+  google_classroom_id TEXT,
   created_at    TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -109,6 +111,7 @@ CREATE TABLE IF NOT EXISTS public.exams (
   exam_date     TIMESTAMPTZ NOT NULL,
   topics        TEXT NOT NULL DEFAULT '',
   reminder_date TIMESTAMPTZ,
+  google_classroom_id TEXT,
   created_at    TIMESTAMPTZ DEFAULT NOW()
 );
 

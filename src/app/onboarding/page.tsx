@@ -5,6 +5,7 @@ import { useData } from '@/context/DataContext';
 import { useToast } from '@/context/ToastContext';
 import { useRouter } from 'next/navigation';
 import { GradeBreakdownItem } from '@/types';
+import GoogleClassroomSyncModal from '@/components/GoogleClassroomSyncModal';
 
 interface LocalSubject {
   name: string;
@@ -13,6 +14,7 @@ interface LocalSubject {
   schedule: string;
   room: string;
   color: string;
+  google_classroom_id?: string;
 }
 
 const colorPalettes = [
@@ -25,12 +27,14 @@ const colorPalettes = [
 ];
 
 export default function OnboardingPage() {
-  const { session, addSemester, addSubject } = useData();
+  const { session, addSemester, addSubject, syncGoogleClassroomData } = useData();
   const { showToast } = useToast();
   const router = useRouter();
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [classroomModalOpen, setClassroomModalOpen] = useState(false);
+  const [classroomImportedData, setClassroomImportedData] = useState<{ courses: any[]; coursework: any[]; materials: any[] } | null>(null);
 
   // Semester info fields
   const [schoolName, setSchoolName] = useState('');
@@ -196,11 +200,32 @@ export default function OnboardingPage() {
     setSubjectList(subjectList.filter((_, i) => i !== index));
   };
 
+  const handleOnboardingClassroomImport = (data: { courses: any[]; coursework: any[]; materials: any[] }) => {
+    setClassroomImportedData(data);
+
+    const COLORS = ['#0ea5e9', '#6366f1', '#10b981', '#f43f5e', '#f59e0b', '#8b5cf6'];
+    const newSubjects: LocalSubject[] = data.courses.map((course, idx) => ({
+      name: course.name,
+      code: course.section || '',
+      instructor_name: 'Google Classroom',
+      schedule: course.descriptionHeading || 'Imported from Google Classroom',
+      room: course.room || '',
+      color: COLORS[idx % COLORS.length],
+      google_classroom_id: course.id,
+    }));
+
+    const filteredNew = newSubjects.filter(
+      ns => !subjectList.some(s => s.name.toLowerCase() === ns.name.toLowerCase() || s.google_classroom_id === ns.google_classroom_id)
+    );
+
+    setSubjectList([...subjectList, ...filteredNew]);
+  };
+
   const handleFinishOnboarding = async () => {
     setLoading(true);
     try {
       // 1. Create Semester with grade breakdown
-      await addSemester(schoolName, semesterName, academicYear, gradingSystem, gradeBreakdown.length > 0 ? gradeBreakdown : undefined);
+      const semester = await addSemester(schoolName, semesterName, academicYear, gradingSystem, gradeBreakdown.length > 0 ? gradeBreakdown : undefined);
       
       // 2. Create Subjects if any
       if (subjectList.length > 0) {
@@ -212,7 +237,21 @@ export default function OnboardingPage() {
             schedule: subj.schedule,
             room: subj.room,
             color: subj.color,
+            google_classroom_id: subj.google_classroom_id,
           });
+        }
+      }
+
+      // 3. If there's classroom data (coursework/notes), sync it using context
+      if (classroomImportedData) {
+        try {
+          await syncGoogleClassroomData({
+            courses: classroomImportedData.courses,
+            coursework: classroomImportedData.coursework,
+            materials: classroomImportedData.materials,
+          });
+        } catch (syncErr) {
+          console.warn("Failed to sync Classroom coursework during onboarding:", syncErr);
         }
       }
 
@@ -561,11 +600,22 @@ export default function OnboardingPage() {
                   </div>
                 </div>
 
-                <div className="md:col-span-2 flex justify-end mt-2">
+                <div className="md:col-span-2 flex justify-between items-center mt-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setClassroomModalOpen(true)}
+                    className="py-2.5 px-4 bg-white/10 hover:bg-white/20 text-white font-mono font-bold rounded-xl text-[10px] uppercase tracking-wider cursor-pointer border border-white/15 transition-all active:scale-[0.98] flex items-center gap-1.5"
+                  >
+                    <svg className="w-3.5 h-3.5 fill-current text-emerald-400" viewBox="0 0 24 24">
+                      <path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/>
+                      <path d="M4 14.07v4.61c0 .52.33.99.82 1.16l7 2.33c.12.04.24.06.36.06.12 0 .24-.02.36-.06l7-2.33c.49-.16.82-.63.82-1.16v-4.61l-8.18 4.46a.375.375 0 01-.36 0L4 14.07z"/>
+                    </svg>
+                    Sync Google Classroom
+                  </button>
                   <button
                     type="button"
                     onClick={handleAddSubjectToList}
-                    className="py-2.5 px-4 bg-white/10 hover:bg-white/20 text-white font-mono font-bold rounded-xl text-[10px] uppercase tracking-wider cursor-pointer border border-white/15 transition-all active:scale-[0.98]"
+                    className="py-2.5 px-5 bg-white hover:bg-sky-50 text-[#6495ED] font-mono font-bold rounded-xl text-[10px] uppercase tracking-wider cursor-pointer shadow-md transition-all active:scale-[0.98]"
                   >
                     Add Subject
                   </button>
@@ -632,6 +682,11 @@ export default function OnboardingPage() {
           )}
         </div>
       </div>
+      <GoogleClassroomSyncModal
+        isOpen={classroomModalOpen}
+        onClose={() => setClassroomModalOpen(false)}
+        onImportLocal={handleOnboardingClassroomImport}
+      />
     </div>
   );
 }

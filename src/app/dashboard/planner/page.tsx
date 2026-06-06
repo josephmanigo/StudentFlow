@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useData } from '@/context/DataContext';
 import { useToast } from '@/context/ToastContext';
+import GoogleClassroomSyncModal from '@/components/GoogleClassroomSyncModal';
 
 export default function PlannerPage() {
   const {
@@ -18,6 +19,7 @@ export default function PlannerPage() {
 
   const [newGoalTitle, setNewGoalTitle] = useState('');
   const [newGoalDate, setNewGoalDate] = useState(new Date().toISOString().split('T')[0]);
+  const [classroomModalOpen, setClassroomModalOpen] = useState(false);
 
   // Current Month/Year for Timeline
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
@@ -136,14 +138,26 @@ export default function PlannerPage() {
 
   return (
     <div className="space-y-6 text-white animate-fade-in p-2 md:p-4">
-      <div className="space-y-1.5">
-        <span className="inline-block px-2 py-0.5 bg-white/20 text-white rounded font-mono font-bold tracking-[0.25em] text-xs border border-white/10">
-          AGENDA
-        </span>
-        <h1 className="text-3xl font-extrabold tracking-tight mt-1 leading-tight font-sans">
-          Academic <span className="font-sans font-extrabold text-sky-100">Planner.</span>
-        </h1>
-        <p className="text-sky-100/70 text-sm font-mono font-bold uppercase tracking-[0.15em]">Visualize deadlines, exam schedules, and manage academic goals.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="space-y-1.5">
+          <span className="inline-block px-2 py-0.5 bg-white/20 text-white rounded font-mono font-bold tracking-[0.25em] text-xs border border-white/10">
+            AGENDA
+          </span>
+          <h1 className="text-3xl font-extrabold tracking-tight mt-1 leading-tight font-sans">
+            Academic <span className="font-sans font-extrabold text-sky-100">Planner.</span>
+          </h1>
+          <p className="text-sky-100/70 text-sm font-mono font-bold uppercase tracking-[0.15em]">Visualize deadlines, exam schedules, and manage academic goals.</p>
+        </div>
+        <button
+          onClick={() => setClassroomModalOpen(true)}
+          className="py-2.5 px-4.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-mono font-bold rounded-xl text-[11px] uppercase tracking-[0.18em] transition-all active:scale-[0.97] cursor-pointer flex items-center gap-2 self-start sm:self-auto"
+        >
+          <svg className="w-3.5 h-3.5 fill-current text-emerald-400" viewBox="0 0 24 24">
+            <path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/>
+            <path d="M4 14.07v4.61c0 .52.33.99.82 1.16l7 2.33c.12.04.24.06.36.06.12 0 .24-.02.36-.06l7-2.33c.49-.16.82-.63.82-1.16v-4.61l-8.18 4.46a.375.375 0 01-.36 0L4 14.07z"/>
+          </svg>
+          Sync Classroom Tasks
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -381,6 +395,11 @@ export default function PlannerPage() {
           </div>
         </div>
       </div>
+
+      <GoogleClassroomSyncModal
+        isOpen={classroomModalOpen}
+        onClose={() => setClassroomModalOpen(false)}
+      />
     </div>
   );
 }

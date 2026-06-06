@@ -25,6 +25,7 @@ export interface Subject {
   schedule: string; // e.g., "Mon/Wed 10:00 AM - 11:30 AM" or JSON string
   room: string;
   color: string; // Hex color or Tailwind color class
+  google_classroom_id?: string; // Links this subject to a Google Classroom Course
   created_at?: string;
 }
 
@@ -38,6 +39,7 @@ export interface Assignment {
   priority: 'low' | 'medium' | 'high';
   status: 'not started' | 'in progress' | 'submitted';
   reminder_date?: string; // ISO string
+  google_classroom_id?: string; // Links this assignment to a Google Classroom Coursework item
   created_at?: string;
 }
 
@@ -49,6 +51,7 @@ export interface Exam {
   exam_date: string; // ISO string
   topics: string; // comma-separated or text description
   reminder_date?: string; // ISO string
+  google_classroom_id?: string; // Links this quiz/exam to a Google Classroom Coursework item
   created_at?: string;
 }
 

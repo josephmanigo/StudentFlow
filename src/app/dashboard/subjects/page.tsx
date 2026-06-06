@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useData } from '@/context/DataContext';
 import { useToast } from '@/context/ToastContext';
+import GoogleClassroomSyncModal from '@/components/GoogleClassroomSyncModal';
 
 export default function SubjectsPage() {
   const {
@@ -22,6 +23,7 @@ export default function SubjectsPage() {
   // Modal states
   const [modalOpen, setModalOpen] = useState(false);
   const [editingSubjId, setEditingSubjId] = useState<string | null>(null);
+  const [classroomModalOpen, setClassroomModalOpen] = useState(false);
   
   // Form fields
   const [name, setName] = useState('');
@@ -239,24 +241,48 @@ export default function SubjectsPage() {
           </h1>
           <p className="text-sky-100/70 text-sm font-mono font-bold uppercase tracking-[0.15em]">Configure your course schedules.</p>
         </div>
-        <button
-          onClick={handleOpenAddModal}
-          className="py-2.5 px-4.5 bg-white hover:bg-sky-50 text-[#6495ED] font-mono font-bold rounded-xl text-[11px] uppercase tracking-[0.18em] transition-all shadow-md active:scale-[0.97] cursor-pointer self-start sm:self-auto"
-        >
-          Add Subject
-        </button>
+        <div className="flex flex-wrap items-center gap-3 self-start sm:self-auto">
+          <button
+            onClick={() => setClassroomModalOpen(true)}
+            className="py-2.5 px-4.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-mono font-bold rounded-xl text-[11px] uppercase tracking-[0.18em] transition-all active:scale-[0.97] cursor-pointer flex items-center gap-2"
+          >
+            <svg className="w-3.5 h-3.5 fill-current text-emerald-400" viewBox="0 0 24 24">
+              <path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/>
+              <path d="M4 14.07v4.61c0 .52.33.99.82 1.16l7 2.33c.12.04.24.06.36.06.12 0 .24-.02.36-.06l7-2.33c.49-.16.82-.63.82-1.16v-4.61l-8.18 4.46a.375.375 0 01-.36 0L4 14.07z"/>
+            </svg>
+            Sync Classroom
+          </button>
+          <button
+            onClick={handleOpenAddModal}
+            className="py-2.5 px-4.5 bg-white hover:bg-sky-50 text-[#6495ED] font-mono font-bold rounded-xl text-[11px] uppercase tracking-[0.18em] transition-all shadow-md active:scale-[0.97] cursor-pointer"
+          >
+            Add Subject
+          </button>
+        </div>
       </div>
 
       {subjects.length === 0 ? (
         <div className="bg-white/12 border border-white/18 backdrop-blur-md rounded-[32px] p-12 text-center max-w-xl mx-auto text-white shadow-xl">
           <h3 className="text-base font-bold font-sans">No subjects created</h3>
           <p className="text-sky-200/60 text-sm font-medium mt-1">Get started by creating your first university course list.</p>
-          <button
-            onClick={handleOpenAddModal}
-            className="mt-5 py-2.5 px-5 bg-white hover:bg-sky-50 text-[#6495ED] font-mono font-bold rounded-xl text-[11px] uppercase tracking-[0.18em] transition-all shadow-md active:scale-[0.97] cursor-pointer"
-          >
-            Create Subject
-          </button>
+          <div className="mt-5 flex justify-center gap-3">
+            <button
+              onClick={() => setClassroomModalOpen(true)}
+              className="py-2.5 px-5 bg-white/10 hover:bg-white/15 border border-white/20 text-white font-mono font-bold rounded-xl text-[11px] uppercase tracking-[0.18em] transition-all active:scale-[0.97] cursor-pointer flex items-center gap-2"
+            >
+              <svg className="w-3.5 h-3.5 fill-current text-emerald-400" viewBox="0 0 24 24">
+                <path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/>
+                <path d="M4 14.07v4.61c0 .52.33.99.82 1.16l7 2.33c.12.04.24.06.36.06.12 0 .24-.02.36-.06l7-2.33c.49-.16.82-.63.82-1.16v-4.61l-8.18 4.46a.375.375 0 01-.36 0L4 14.07z"/>
+              </svg>
+              Sync Google Classroom
+            </button>
+            <button
+              onClick={handleOpenAddModal}
+              className="py-2.5 px-5 bg-white hover:bg-sky-50 text-[#6495ED] font-mono font-bold rounded-xl text-[11px] uppercase tracking-[0.18em] transition-all shadow-md active:scale-[0.97] cursor-pointer"
+            >
+              Create Subject
+            </button>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -622,6 +648,11 @@ export default function SubjectsPage() {
           </div>
         </div>
       )}
+
+      <GoogleClassroomSyncModal
+        isOpen={classroomModalOpen}
+        onClose={() => setClassroomModalOpen(false)}
+      />
     </div>
   );
 }

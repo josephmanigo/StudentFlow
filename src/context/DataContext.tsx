@@ -72,6 +72,12 @@ interface DataContextType {
   addGoal: (title: string, targetDate: string) => Promise<Goal>;
   toggleGoal: (id: string) => Promise<void>;
   deleteGoal: (id: string) => Promise<void>;
+
+  syncGoogleClassroomData: (data: {
+    courses: any[];
+    coursework: any[];
+    materials: any[];
+  }) => Promise<{ success: boolean; importedSubjects: number; importedAssignments: number; importedExams: number }>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -1016,6 +1022,178 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const syncGoogleClassroomData = async (data: {
+    courses: any[];
+    coursework: any[];
+    materials: any[];
+  }) => {
+    const userId = session.user?.id || 'local-user';
+    const semId = activeSemester?.id || 'demo-sem-1';
+    const COLORS = ['#4F46E5', '#0EA5E9', '#F43F5E', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'];
+
+    if (isLocalMode) {
+      let importedSubjects = 0;
+      let importedAssignments = 0;
+      let importedExams = 0;
+
+      const updatedSubjects = [...subjects];
+      const updatedAssignments = [...assignments];
+      const updatedExams = [...exams];
+
+      const classIdToSubjectIdMap: Record<string, string> = {};
+
+      subjects.forEach(s => {
+        if (s.google_classroom_id) {
+          classIdToSubjectIdMap[s.google_classroom_id] = s.id;
+        }
+      });
+
+      data.courses.forEach((course, idx) => {
+        let subjectId = classIdToSubjectIdMap[course.id];
+        if (!subjectId) {
+          const existing = updatedSubjects.find(s => s.name.toLowerCase() === course.name.toLowerCase() || s.google_classroom_id === course.id);
+          if (existing) {
+            subjectId = existing.id;
+            if (!existing.google_classroom_id) {
+              existing.google_classroom_id = course.id;
+            }
+          } else {
+            const newSubj: Subject = {
+              id: 'sub-' + Math.random().toString(36).substr(2, 9),
+              semester_id: semId,
+              user_id: userId,
+              name: course.name,
+              code: course.section || '',
+              instructor_name: 'Google Classroom',
+              schedule: course.descriptionHeading || 'Imported from Google Classroom',
+              room: course.room || '',
+              color: COLORS[idx % COLORS.length],
+              google_classroom_id: course.id,
+            };
+            updatedSubjects.push(newSubj);
+            subjectId = newSubj.id;
+            importedSubjects++;
+          }
+          classIdToSubjectIdMap[course.id] = subjectId;
+        }
+      });
+
+      setSubjects(updatedSubjects);
+      localStorage.setItem('studentflow_subjects', JSON.stringify(updatedSubjects));
+
+      data.coursework.forEach(item => {
+        const subjectId = classIdToSubjectIdMap[item.courseId];
+        if (!subjectId) return;
+
+        const isExam = /quiz|test|exam|midterm|final/i.test(item.title) || item.workType === 'MULTIPLE_CHOICE_QUESTION';
+
+        const parseGoogleDueDate = (dueDate?: { year?: number; month?: number; day?: number }, dueTime?: { hours?: number; minutes?: number }) => {
+          if (!dueDate || !dueDate.year || !dueDate.month || !dueDate.day) return null;
+          const y = dueDate.year;
+          const m = String(dueDate.month).padStart(2, '0');
+          const d = String(dueDate.day).padStart(2, '0');
+          const h = dueTime && dueTime.hours !== undefined ? String(dueTime.hours).padStart(2, '0') : '23';
+          const mins = dueTime && dueTime.minutes !== undefined ? String(dueTime.minutes).padStart(2, '0') : '59';
+          return `${y}-${m}-${d}T${h}:${mins}:00.000Z`;
+        };
+
+        const deadlineVal = parseGoogleDueDate(item.dueDate, item.dueTime) || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+        if (isExam) {
+          const exists = updatedExams.some(e => e.google_classroom_id === item.id || (e.subject_id === subjectId && e.title.toLowerCase() === item.title.toLowerCase()));
+          if (!exists) {
+            const newExam: Exam = {
+              id: 'exam-' + Math.random().toString(36).substr(2, 9),
+              subject_id: subjectId,
+              user_id: userId,
+              title: item.title,
+              exam_date: deadlineVal,
+              topics: item.description || '',
+              google_classroom_id: item.id,
+            };
+            updatedExams.push(newExam);
+            importedExams++;
+          }
+        } else {
+          const exists = updatedAssignments.some(a => a.google_classroom_id === item.id || (a.subject_id === subjectId && a.title.toLowerCase() === item.title.toLowerCase()));
+          if (!exists) {
+            const newAssign: Assignment = {
+              id: 'assign-' + Math.random().toString(36).substr(2, 9),
+              subject_id: subjectId,
+              user_id: userId,
+              title: item.title,
+              description: item.description || '',
+              deadline: deadlineVal,
+              priority: 'medium',
+              status: 'not started',
+              google_classroom_id: item.id,
+            };
+            updatedAssignments.push(newAssign);
+            importedAssignments++;
+          }
+        }
+      });
+
+      setAssignments(updatedAssignments);
+      localStorage.setItem('studentflow_assignments', JSON.stringify(updatedAssignments));
+
+      setExams(updatedExams);
+      localStorage.setItem('studentflow_exams', JSON.stringify(updatedExams));
+
+      if (data.materials && data.materials.length > 0) {
+        try {
+          await fetch('/api/classroom/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId,
+              isLocalMode: true,
+              materials: data.materials,
+              courses: data.courses,
+            })
+          });
+        } catch (e) {
+          console.warn('Failed to sync materials to RAG backend:', e);
+        }
+      }
+
+      return {
+        success: true,
+        importedSubjects,
+        importedAssignments,
+        importedExams
+      };
+    } else {
+      const response = await fetch('/api/classroom/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          semesterId: semId,
+          isLocalMode: false,
+          courses: data.courses,
+          coursework: data.coursework,
+          materials: data.materials,
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Failed to sync with server');
+      }
+
+      const result = await response.json();
+      await fetchSupabaseData(userId);
+
+      return {
+        success: true,
+        importedSubjects: result.importedSubjects || 0,
+        importedAssignments: result.importedAssignments || 0,
+        importedExams: result.importedExams || 0
+      };
+    }
+  };
+
   return (
     <DataContext.Provider
       value={{
@@ -1059,6 +1237,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         addGoal,
         toggleGoal,
         deleteGoal,
+        syncGoogleClassroomData,
       }}
     >
       {children}

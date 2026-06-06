@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans, JetBrains_Mono, Outfit } from "next/font/google";
 import "./globals.css";
 import { DataProvider } from "@/context/DataContext";
 import { ToastProvider } from "@/context/ToastContext";
+import Script from "next/script";
 
 const sansFont = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -39,6 +40,7 @@ export default function RootLayout({
             {children}
           </ToastProvider>
         </DataProvider>
+        <Script src="https://accounts.google.com/gsi/client" strategy="beforeInteractive" />
       </body>
     </html>
   );
