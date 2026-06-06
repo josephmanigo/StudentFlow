@@ -116,3 +116,29 @@ export interface UserSession {
   } | null;
   loading: boolean;
 }
+
+// ─── NotebookLM-style source tracking ───────────────────────
+
+export interface NotebookSource {
+  id: string;
+  user_id: string;
+  name: string;
+  file_type: 'pdf' | 'txt' | 'docx' | 'md';
+  size_bytes?: number;
+  status: 'processing' | 'ready' | 'error';
+  chunk_count: number;
+  storage_path?: string;
+  created_at: string;
+}
+
+// ─── RAG vector store chunk ──────────────────────────────────
+
+export interface DocumentChunk {
+  id: string;
+  user_id: string;
+  source_id?: string;
+  source_name: string;
+  content: string;
+  metadata?: Record<string, unknown>;
+  created_at: string;
+}
