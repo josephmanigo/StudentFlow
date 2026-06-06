@@ -122,10 +122,15 @@ export default function PlannerPage() {
       return e.exam_date.split('T')[0] === dateStr;
     });
 
+    const dayGoals = goals.filter((g) => {
+      return g.target_date.split('T')[0] === dateStr;
+    });
+
     return {
       assignments: dayAssignments,
       exams: dayExams,
-      totalCount: dayAssignments.length + dayExams.length,
+      goals: dayGoals,
+      totalCount: dayAssignments.length + dayExams.length + dayGoals.length,
     };
   };
 
@@ -193,7 +198,7 @@ export default function PlannerPage() {
                   return <div key={`empty-${idx}`} className="bg-white/2 rounded-xl border border-dashed border-white/5" />;
                 }
 
-                const { assignments: dayAss, exams: dayEx, totalCount } = getEventsForDate(cell);
+                const { assignments: dayAss, exams: dayEx, goals: dayGls, totalCount } = getEventsForDate(cell);
                 const isToday = cell.toDateString() === new Date().toDateString();
 
                 return (
@@ -211,7 +216,7 @@ export default function PlannerPage() {
                     
                     {/* Event indicators */}
                     {totalCount > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1 justify-end">
+                      <div className="flex flex-wrap gap-1.5 mt-1 justify-end items-center">
                         {dayAss.map((a) => (
                           <div
                             key={a.id}
@@ -226,6 +231,13 @@ export default function PlannerPage() {
                             className="w-1.5 h-1.5 rounded-none"
                             style={{ backgroundColor: getSubjectColor(e.subject_id) }}
                             title={`Exam: ${e.title}`}
+                          />
+                        ))}
+                        {dayGls.map((g) => (
+                          <div
+                            key={g.id}
+                            className="w-1.5 h-1.5 rotate-45 bg-amber-400 shrink-0"
+                            title={`Goal: ${g.title}`}
                           />
                         ))}
                       </div>
@@ -246,6 +258,10 @@ export default function PlannerPage() {
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 bg-white" />
                 <span>Exam (Square)</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rotate-45 bg-amber-400" />
+                <span>Goal (Diamond)</span>
               </span>
             </div>
 
