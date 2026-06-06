@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useData } from '@/context/DataContext';
 import { useToast } from '@/context/ToastContext';
+import { useClassroomSync } from '@/context/ClassroomSyncContext';
 
 export default function AssignmentsPage() {
   const {
@@ -13,6 +14,7 @@ export default function AssignmentsPage() {
     deleteAssignment,
   } = useData();
   const { showToast } = useToast();
+  const { isConnected, lastSynced, isSyncing, triggerSync, syncStatus } = useClassroomSync();
 
   // View toggles: 'kanban' or 'list'
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
@@ -206,7 +208,13 @@ export default function AssignmentsPage() {
                           {subjects.find(s => s.id === task.subject_id)?.code || 'Course'}
                         </span>
                         
-                        <div className="flex items-center gap-2.5 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-2">
+                          {task.google_classroom_id && (
+                            <span className="text-[8px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/20 px-1.5 py-0.5 rounded tracking-widest uppercase shrink-0">
+                              GC
+                            </span>
+                          )}
+                          <div className="flex items-center gap-2.5 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => handleToggleStatus(task)}
                             className="text-[11px] font-mono font-bold uppercase tracking-wider text-sky-250 border-b border-sky-250/20 hover:border-sky-100 pb-0.5 transition-all cursor-pointer"
@@ -225,6 +233,7 @@ export default function AssignmentsPage() {
                           >
                             remove
                           </button>
+                          </div>
                         </div>
                       </div>
 
@@ -348,13 +357,35 @@ export default function AssignmentsPage() {
           </h1>
           <p className="text-sky-100/70 text-sm font-mono font-bold uppercase tracking-[0.15em]">Organize schedules and submission states.</p>
         </div>
-        <button
-          onClick={handleOpenAddModal}
-          disabled={subjects.length === 0}
-          className="py-2.5 px-4.5 bg-white hover:bg-sky-50 text-[#6495ED] font-mono font-bold rounded-xl text-[11px] uppercase tracking-[0.18em] transition-all shadow-md active:scale-[0.97] disabled:opacity-40 self-start sm:self-auto cursor-pointer"
-        >
-          New Assignment
-        </button>
+        <div className="flex items-center gap-3 self-start sm:self-auto">
+          {/* Classroom Live Sync Indicator */}
+          {isConnected && (
+            <button
+              onClick={triggerSync}
+              disabled={isSyncing}
+              title={lastSynced ? `Last synced: ${lastSynced.toLocaleTimeString()}` : 'Sync with Google Classroom'}
+              className={`flex items-center gap-1.5 py-2 px-3 border rounded-xl text-[9px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                syncStatus === 'syncing'
+                  ? 'border-sky-400/40 bg-sky-500/15 text-sky-200'
+                  : syncStatus === 'success'
+                  ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-200'
+                  : 'border-white/15 bg-white/5 text-sky-200 hover:bg-white/10'
+              } disabled:opacity-60`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${
+                isSyncing ? 'bg-sky-400 animate-pulse' : 'bg-emerald-400'
+              }`} />
+              {isSyncing ? 'Syncing...' : 'Live'}
+            </button>
+          )}
+          <button
+            onClick={handleOpenAddModal}
+            disabled={subjects.length === 0}
+            className="py-2.5 px-4.5 bg-white hover:bg-sky-50 text-[#6495ED] font-mono font-bold rounded-xl text-[11px] uppercase tracking-[0.18em] transition-all shadow-md active:scale-[0.97] disabled:opacity-40 cursor-pointer"
+          >
+            New Assignment
+          </button>
+        </div>
       </div>
 
       {subjects.length === 0 ? (

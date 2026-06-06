@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useData } from '@/context/DataContext';
 import { useToast } from '@/context/ToastContext';
+import { useClassroomSync } from '@/context/ClassroomSyncContext';
 
 export default function GradesPage() {
   const {
@@ -14,6 +15,7 @@ export default function GradesPage() {
     activeSemester,
   } = useData();
   const { showToast } = useToast();
+  const { isConnected, lastSynced, isSyncing, triggerSync, syncStatus } = useClassroomSync();
 
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>(subjects[0]?.id || '');
   
@@ -187,6 +189,26 @@ export default function GradesPage() {
         
         {subjects.length > 0 && (
           <div className="flex items-center gap-3 self-start sm:self-auto">
+            {/* Classroom Live Sync */}
+            {isConnected && (
+              <button
+                onClick={triggerSync}
+                disabled={isSyncing}
+                title={lastSynced ? `Last synced: ${lastSynced.toLocaleTimeString()}` : 'Sync grades from Google Classroom'}
+                className={`flex items-center gap-1.5 py-2 px-3 border rounded-xl text-[9px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                  syncStatus === 'syncing'
+                    ? 'border-sky-400/40 bg-sky-500/15 text-sky-200'
+                    : syncStatus === 'success'
+                    ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-200'
+                    : 'border-white/15 bg-white/5 text-sky-200 hover:bg-white/10'
+                } disabled:opacity-60`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  isSyncing ? 'bg-sky-400 animate-pulse' : 'bg-emerald-400'
+                }`} />
+                {isSyncing ? 'Syncing...' : 'Live'}
+              </button>
+            )}
             {/* Subject Selector */}
             <select
               value={selectedSubjectId}
@@ -275,7 +297,16 @@ export default function GradesPage() {
                     <tbody className="divide-y divide-white/5 text-xs text-white">
                       {subjectGrades.map((grd) => (
                         <tr key={grd.id} className="hover:bg-white/5 transition-colors">
-                          <td className="py-3.5 px-6 font-sans font-semibold text-white text-sm">{grd.name}</td>
+                          <td className="py-3.5 px-6 font-sans font-semibold text-white text-sm">
+                            <div className="flex items-center gap-2">
+                              {grd.google_classroom_id && (
+                                <span className="text-[8px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/20 px-1.5 py-0.5 rounded tracking-widest uppercase shrink-0" title="Grade from Google Classroom">
+                                  GC
+                                </span>
+                              )}
+                              {grd.name}
+                            </div>
+                          </td>
                           <td className="py-3.5 px-4 font-semibold text-sky-100">
                             <span className="px-2 py-0.5 text-xs font-mono font-bold rounded border border-white/10 bg-white/10 uppercase tracking-wider">
                               {grd.category}

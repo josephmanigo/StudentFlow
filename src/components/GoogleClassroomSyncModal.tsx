@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useData } from '@/context/DataContext';
 import { useToast } from '@/context/ToastContext';
+import { useClassroomSync } from '@/context/ClassroomSyncContext';
 
 interface GoogleClassroomSyncModalProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ interface GoogleClassroomSyncModalProps {
 export default function GoogleClassroomSyncModal({ isOpen, onClose, onImportLocal }: GoogleClassroomSyncModalProps) {
   const { syncGoogleClassroomData } = useData();
   const { showToast } = useToast();
+  const { storeToken } = useClassroomSync();
 
   const [step, setStep] = useState<1 | 2>(1);
   const [loading, setLoading] = useState(false);
@@ -54,8 +56,9 @@ export default function GoogleClassroomSyncModal({ isOpen, onClose, onImportLoca
             return;
           }
           
-          setToken(tokenResponse.access_token);
-          await fetchCourses(tokenResponse.access_token);
+          const accessToken = tokenResponse.access_token;
+          setToken(accessToken);
+          await fetchCourses(accessToken);
         },
         error_callback: (err: any) => {
           setLoading(false);
@@ -180,13 +183,24 @@ export default function GoogleClassroomSyncModal({ isOpen, onClose, onImportLoca
       }
 
       setLoadingMessage('Saving courses, assignments, and embedding notes in RAG...');
+
+      // Filter to assignments only (no exams)
+      const assignmentsOnly = courseworkList.filter(
+        (cw: any) => cw.workType === 'ASSIGNMENT' || cw.workType === 'SHORT_ANSWER_QUESTION' || !cw.workType
+      );
+
       const result = await syncGoogleClassroomData({
         courses: selectedCoursesData,
-        coursework: courseworkList,
+        coursework: assignmentsOnly,
         materials: materialsList,
       });
 
-      showToast(`Successfully imported ${result.importedSubjects} courses, ${result.importedAssignments} assignments, and ${result.importedExams} exams!`, "success");
+      // Store token and courses for realtime polling
+      if (token) {
+        storeToken(token, selectedCoursesData);
+      }
+
+      showToast(`✓ Realtime sync enabled! ${result.importedSubjects} courses, ${result.importedAssignments} assignments imported.`, "success");
       onClose();
     } catch (err: any) {
       showToast(err.message || "Import failed", "error");

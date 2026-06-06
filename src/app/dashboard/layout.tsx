@@ -6,6 +6,8 @@ import { useToast } from '@/context/ToastContext';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { X, Menu } from 'lucide-react';
+import ClassroomSyncBadge from '@/components/ClassroomSyncBadge';
+import GoogleClassroomSyncModal from '@/components/GoogleClassroomSyncModal';
 
 const navItems = [
   { name: 'DASHBOARD', href: '/dashboard' },
@@ -26,6 +28,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [classroomReconnectOpen, setClassroomReconnectOpen] = useState(false);
 
   // Authentication & Onboarding Protection
   useEffect(() => {
@@ -131,6 +134,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           )}
 
+          {/* Google Classroom Realtime Sync Badge */}
+          <ClassroomSyncBadge onReconnect={() => setClassroomReconnectOpen(true)} />
+
           <button
             onClick={handleSignOut}
             className="flex items-center justify-center gap-2 w-full px-3 py-2 text-[11px] font-mono font-bold uppercase tracking-[0.18em] text-rose-500 hover:bg-rose-50/60 rounded-xl transition-all cursor-pointer"
@@ -139,6 +145,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </button>
         </div>
       </aside>
+
+      {/* Google Classroom Reconnect Modal */}
+      {classroomReconnectOpen && (
+        <GoogleClassroomSyncModal
+          isOpen={classroomReconnectOpen}
+          onClose={() => setClassroomReconnectOpen(false)}
+        />
+      )}
 
       {/* Mobile Drawer */}
       {sidebarOpen && (

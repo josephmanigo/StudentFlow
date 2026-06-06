@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans, JetBrains_Mono, Outfit } from "next/font/google";
 import "./globals.css";
 import { DataProvider } from "@/context/DataContext";
 import { ToastProvider } from "@/context/ToastContext";
+import { ClassroomSyncProvider } from "@/context/ClassroomSyncContext";
 import Script from "next/script";
 
 const sansFont = Plus_Jakarta_Sans({
@@ -37,7 +38,9 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900 font-sans selection:bg-sky-500 selection:text-white">
         <DataProvider>
           <ToastProvider>
-            {children}
+            <ClassroomSyncProvider>
+              {children}
+            </ClassroomSyncProvider>
           </ToastProvider>
         </DataProvider>
         <Script src="https://accounts.google.com/gsi/client" strategy="beforeInteractive" />
